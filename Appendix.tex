@@ -1,0 +1,50 @@
+\section{Appendix}
+\subsection{Original Sinkhorn Algorithm (deprecated)} \label{subsec:particle_algorithm}
+Here is my first attempt at such an algorithm. I derived it using my prior knowledge of optimal transport and heavily relying on ChatGPT 03-mini (deep research). It would be good if either Nick or Alex could check for correctness and viability.
+
+Let's treat the timestepper $\phi_T(X)$ as deterministic first. The extension to stochastic timesteppers is simply done by averaging, but it adds a lot of unnecessary complexity in notation. Instead of minimizing the Wasserstein-2 distance $W_2^2(X, \phi_T(X))$, which is possibly non-smooth and non-convex in the particles $X$, we minimize the Sinkhorn divergence,
+\begin{equation}
+    F(X) = \frac{1}{2}S_{\varepsilon}(X, \phi_T(X)) = \frac{1}{2}\text{OT}_\varepsilon(X, \phi_T(X)) - \frac{1}{4}\left(\text{OT}_\varepsilon(X,X) + \text{OT}_{\varepsilon}(\phi_T(X), \phi_T(X)\right).
+\end{equation}
+This works since the Sinkhorn divergence dominates the Wasserstein-2 distance and minimizing the former will also minimize the latter. In the above formula, $\text{OT}_\varepsilon$ represents the entropy-regularized Wasserstein-2 distance, i.e., 
+\begin{equation} \label{eq:regularized_OT_loss}
+    \text{OT}_\varepsilon(a, b, C) = \underset{P \in \Pi(a,b)}{\min} \left\langle P, C\right\rangle + \varepsilon \text{KL}\left(P || a b^T\right) = \underset{P \in \Pi(a,b)}{\min} \left\langle P, C\right\rangle + \varepsilon \sum_{i,j} P_{ij} \left(\log P_{ij} -  \log(a_i b_j)\right)
+\end{equation}
+for discrete probability vectors $a, b$ and the associated cost matrix $C_{i,j} = c(X_i, Y_j)$. In our setting, the vectors $a$ and $b$ are just uniform because they are empirical measures for $X$ and $\phi_T(X)$. The minimization is achieved over all joint probability matrices $P$ such that its marginals are $a$ and $b$ respectively. The advantage of using the Sinkhorn divergence instead of the Wasserstein distance is that it is smooth, easily differentiable with a known gradient, and most importantly, convex.
+
+The minimization of~\eqref{eq:regularized_OT_loss} is done by applying the Sinkhorn algorithm - the workhorse of computational optimal transport. The output of the Sinkhorn algorithm is the optimal transport plan (i.e. the joint measure $P$) given by
+\begin{equation} \label{eq:ot_plan}
+    P(a, b) = \text{diag}(u) \exp\left(-\frac{C}{\varepsilon}\right) \text{diag}(v)
+\end{equation}
+where the exponential is calculated element-wise.
+
+Interestingly, the gradients of $F$ have a known formula! This makes our computational approach a lot more efficient. For fixed particle ensembles $X$ and $Y$, we have
+\begin{align} \label{eq:sinkhorn_div_gradient}
+    \nabla_X \frac{1}{2}S_{\varepsilon}(X, Y) &= X - P Y \\
+    \nabla_Y \frac{1}{2}S_{\varepsilon}(X,Y) &= Y - P^T X
+\end{align}
+where $P$ is the optimal transport plan given by equation~\eqref{eq:ot_plan}. Plugging these two formulas into the gradient of the objective, we obtain
+\begin{align} \label{eq:objective_gradient}
+\begin{split}
+    \nabla_X F(X) &= \nabla_1 \frac{1}{2} S_{\varepsilon}(X, \phi_T(X)) + \left[D\phi_T(X)\right]^T  \nabla_2 \frac{1}{2} S_\varepsilon(X, \phi_T(X)) \\ &= \underbrace{X - NP \phi_T(X)}_{\text{Part A}} + \underbrace{\left[D\phi_T(X)\right]^T \left(\phi_T(X) - NP^T X\right)}_{\text{Part B}}
+\end{split}
+\end{align} We need to scale $P$ and $P^T$ by the number of particles $N$ to make $P$ a stochastic matrix. This is just good practice. Now we can just plug in the objective $F(X)$ and its gradient into any optimization algorithm of our choice and find steady-state distributions of particle methods!
+
+When the timestepper $\phi_T$ is stochastic, we have some extra work to do. Let's pack all the stochasticity into one variable $\omega$. Think of $\omega$ as all the random normal Brownian increments of an SDE. Then 
+\begin{equation}
+Y = \phi_T(X) = \phi_T(X, \omega).
+\end{equation}
+To make our objective function $F(X)$ well-defined, we need to average over many sample paths $Y$, i.e., an average over $\omega$. The new objective function then reads
+\begin{equation}
+    F(X) = \frac{1}{2}\mathbb{E}_{\omega}\left[S_{\varepsilon}\left(X, \phi_T(X,\omega)\right)\right]
+\end{equation}
+Furthermore, this averaging is also valid for the total gradient of $F$. Indeed, we have the unbiased estimator
+\begin{equation}
+    \nabla F(X) = \mathbb{E}_\omega\left[ \nabla F(X, \omega)\right] = \mathbb{E}_\omega\left[ \frac{1}{2} \nabla S_\varepsilon(X, \phi_T(X, \omega))\right].
+\end{equation}
+
+I will try this approach with stochastic gradient descent first. The idea is to essentially do minibatching where we only update a subset of the particles given by index set $I$:
+\begin{equation}
+    X_I^{k+1} = X_I^k - \frac{\alpha}{L} \sum_{l=1}^{L} \nabla \frac{1}{2} S_\varepsilon(X_I^k, \phi_T(X_I^k, \omega_l))
+\end{equation}
+We then have to compute the optimal transport map for only a subset of particles of size $|I|$. The timestepper $\phi_T$ can be applied to a batch $X_I^k$ without problem because all particles are independent!
