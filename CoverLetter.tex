@@ -1,0 +1,27 @@
+\documentclass{letter}
+\usepackage[a4paper]{geometry}
+\usepackage{hyperref}
+%\evensidemargin 1cm
+%\oddsidemargin 1cm
+\longindentation=0pt
+\signature{Hannes~Vandecasteele}
+\address{January 10, 2026 \\ \\ Johns Hopkins University \\ Department of Applied Mathematics and Statistics \\ 3400 N. Charles Street \\ 21218 Baltimore, Maryland, USA \\ \\ Phone: +1 (667)-415-7772 \\  Correspondence to: \\Hannes Vandecasteele, {\tt hvandec1@jh.edu}\\}
+\begin{document}
+
+\begin{letter}{Editor \\ \bf{The Journal of Computational Physics}}
+\opening{Dear Editorial Board,}
+
+I am pleased to submit an original research article entitled ``Optimal Transport, Timesteppers, Newton-Krylov Methods
+and Steady States of Collective Particle Dynamics.'' by Hannes Vandecasteele (JHU), Nicholas Karris (UCSD), Alexander Cloninger (UCSD) and Ioannis G. Kevrekidis (JHU) for consideration for publication in The Journal of Computational Physics.
+
+In this work, we introduce a new computational framework for computing steady-state distributions of stochastic particle systems directly from particle timesteppers. The key idea is to embed the notion of a particle steady state in optimal transport theory, allowing the residual of a timestepper to be interpreted as a velocity field on the space of probability measures. This leads to well-defined and efficient algorithms for steady-state computation in systems where classical particle-level fixed points do not exist.
+
+Building on this formulation, we develop both first-order (Adam-type) and second-order (Newton--Krylov) solvers for computing steady states using smooth distributional representations such as inverse cumulative distribution functions and sliced-Wasserstein metrics. The resulting methods enable fast, matrix-free steady-state and bifurcation computations for high-dimensional stochastic particle models. We provide convergence and error analyses and demonstrate the approach on a range of linear and nonlinear stochastic systems in one and multiple spatial dimensions.
+
+This manuscript has not been published previously and is not under consideration elsewhere. All authors have approved the manuscript and agree to its submission. We have no conflicts of interest to declare.
+
+Thank you for your consideration.
+
+\closing{Sincerely,}
+\end{letter}
+\end{document}
